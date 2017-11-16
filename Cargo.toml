@@ -1,7 +1,16 @@
 [package]
 name = "actix_derive"
-version = "0.0.1"
-authors = ["Callym <hi@callym.com>"]
+version = "0.0.2"
+authors = ["Callym <hi@callym.com>", "Nikolay Kim <fafhrd91@gmail.com>"]
+description = "Actor framework for Rust"
+readme = "README.md"
+keywords = ["actor", "futures", "actix", "async", "tokio"]
+homepage = "https://github.com/actix/actix-derive/"
+repository = "https://github.com/actix/actix-derive.git"
+documentation = "https://docs.rs/actix-derive/"
+categories = ["network-programming", "asynchronous"]
+license = "Apache-2.0"
+exclude = [".gitignore", ".travis.yml", ".cargo/config", "appveyor.yml"]
 
 [lib]
 proc-macro = true
