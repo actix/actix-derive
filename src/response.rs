@@ -1,7 +1,7 @@
 use quote;
 use syn;
 
-pub const MESSAGE_ATTR: &str = "Message";
+pub const MESSAGE_ATTR: &str = "Response";
 
 pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
 let (item_type, error_type) = {

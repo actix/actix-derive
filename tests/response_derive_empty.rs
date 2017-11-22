@@ -5,33 +5,30 @@ extern crate futures;
 use actix::{msgs, Actor, Address, Arbiter, Context, Handler, Response, ResponseType, System};
 use futures::{future, Future};
 
-#[derive(Message)]
-#[Message(usize)]
-struct Sum(usize, usize);
+#[derive(Response)]
+struct Empty;
 
-struct SumActor;
+struct EmptyActor;
 
-impl Actor for SumActor {
+impl Actor for EmptyActor {
     type Context = Context<Self>;
 }
 
-impl Handler<Sum> for SumActor {
-    fn handle(&mut self, message: Sum, _context: &mut Context<Self>) -> Response<Self, Sum> {
-        Self::reply(message.0 + message.1)
+impl Handler<Empty> for EmptyActor {
+    fn handle(&mut self, _message: Empty, _context: &mut Context<Self>) -> Response<Self, Empty> {
+        Self::empty()
     }
 }
 
 #[test]
-fn message_derive() {
+fn response_derive_empty() {
     let system = System::new("test");
-
-    let addr: Address<_> = SumActor.start();
-	
-    let res = addr.call_fut(Sum(10, 5));
+    let addr: Address<_> = EmptyActor.start();
+    let res = addr.call_fut(Empty);
     
     system.handle().spawn(res.then(|res| {
         match res {
-            Ok(Ok(result)) => assert!(result == 10 + 5),
+            Ok(Ok(result)) => assert!(result == ()),
             _ => panic!("Something went wrong"),
         }
         

@@ -5,7 +5,7 @@ extern crate quote;
 
 use proc_macro::TokenStream;
 
-mod message;
+mod response;
 
 macro_rules! create_derive(
     ($mod_: ident, $trait_: ident, $fn_name: ident) => {
@@ -28,7 +28,7 @@ macro_rules! create_derive(
     };
 );
 
-create_derive!(message, Message, message_derive, MessageResult, MessageError, Message);
+create_derive!(response, Response, response_derive, Response);
 
 fn get_attribute_type_multiple(ast: &syn::DeriveInput, name: &str) -> Option<Vec<Option<syn::Ty>>> {
     let attr = ast.attrs.iter().find(|a| a.name() == name);
