@@ -4,13 +4,20 @@ use syn;
 pub const MESSAGE_ATTR: &str = "Message";
 
 pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
-    let (item_type, error_type) = {
-        let ty = ::get_attribute_type_multiple(ast, MESSAGE_ATTR).unwrap();
-        match ty.len() {
-            1 => (ty[0].clone(), None),
-            2 => (ty[0].clone(), ty[1].clone()),
-            _ => panic!("#[{}(type, type)] takes 2 parameters, given {}", MESSAGE_ATTR, ty.len()),
+let (item_type, error_type) = {
+        match ::get_attribute_type_multiple(ast, MESSAGE_ATTR) {
+            Some(ty) => {
+                match ty.len() {
+                    1 => (ty[0].clone(), None),
+                    2 => (ty[0].clone(), ty[1].clone()),
+                    _ => panic!("#[{}(type, type)] takes 2 parameters, given {}", MESSAGE_ATTR, ty.len()),
+                }
+            },
+            None => {
+                (None, None)
+            }
         }
+
     };
 
     let name = &ast.ident;
