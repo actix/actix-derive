@@ -2,11 +2,11 @@ extern crate actix;
 #[macro_use] extern crate actix_derive;
 extern crate futures;
 
-use actix::{msgs, Actor, Address, Arbiter, Context, Handler, Response, ResponseType, System};
+use actix::{msgs, Actor, Address, Arbiter, Context, Handler, Response, System};
 use futures::{future, Future};
 
-#[derive(Response)]
-#[Response(usize)]
+#[derive(Message)]
+#[rtype(usize)]
 struct Sum(usize, usize);
 
 struct SumActor;

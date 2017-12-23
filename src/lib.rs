@@ -1,36 +1,20 @@
 extern crate proc_macro;
 extern crate syn;
-#[macro_use]
-extern crate quote;
+#[macro_use] extern crate quote;
 
 use proc_macro::TokenStream;
+mod message;
 
-mod response;
+#[doc(hidden)]
+#[proc_macro_derive(Message, attributes(rtype))]
+pub fn message_derive_rtype(input: TokenStream) -> TokenStream {
+    let s = input.to_string();
+    let ast = syn::parse_derive_input(&s).unwrap();
+    message::expand(&ast).parse().expect("Expanded output was no correct Rust code")
+}
 
-macro_rules! create_derive(
-    ($mod_: ident, $trait_: ident, $fn_name: ident) => {
-        #[proc_macro_derive($trait_)]
-        #[doc(hidden)]
-        pub fn $fn_name(input: TokenStream) -> TokenStream {
-            let s = input.to_string();
-            let ast = syn::parse_derive_input(&s).unwrap();
-            $mod_::expand(&ast).parse().expect("Expanded output was no correct Rust code")
-        }
-    };
-    ($mod_: ident, $trait_: ident, $fn_name: ident, $($attr: ident),+) => {
-        #[proc_macro_derive($trait_, attributes($($attr),+))]
-        #[doc(hidden)]
-        pub fn $fn_name(input: TokenStream) -> TokenStream {
-            let s = input.to_string();
-            let ast = syn::parse_derive_input(&s).unwrap();
-            $mod_::expand(&ast).parse().expect("Expanded output was no correct Rust code")
-        }
-    };
-);
-
-create_derive!(response, Response, response_derive, Response);
-
-fn get_attribute_type_multiple(ast: &syn::DeriveInput, name: &str) -> Option<Vec<Option<syn::Ty>>> {
+fn get_attribute_type_multiple(ast: &syn::DeriveInput, name: &str) -> Option<Vec<Option<syn::Ty>>>
+{
     let attr = ast.attrs.iter().find(|a| a.name() == name);
 
     if attr.is_none() {

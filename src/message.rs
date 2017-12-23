@@ -1,10 +1,10 @@
 use quote;
 use syn;
 
-pub const MESSAGE_ATTR: &str = "Response";
+pub const MESSAGE_ATTR: &str = "rtype";
 
 pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
-let (item_type, error_type) = {
+    let (item_type, error_type) = {
         match ::get_attribute_type_multiple(ast, MESSAGE_ATTR) {
             Some(ty) => {
                 match ty.len() {
@@ -25,11 +25,16 @@ let (item_type, error_type) = {
 
     let item_type = item_type.unwrap_or(syn::Ty::Tup(vec![]));
     let error_type = error_type.unwrap_or(syn::Ty::Tup(vec![]));
+    let dummy_const = syn::Ident::new(format!("_IMPL_ACT_{}", name).to_lowercase());
 
     quote!{
-        impl #impl_generics ResponseType for #name #ty_generics #where_clause {
-            type Item = #item_type;
-            type Error = #error_type;
+        mod #dummy_const {
+            extern crate actix;
+
+            impl #impl_generics actix::ResponseType for #name #ty_generics #where_clause {
+                type Item = #item_type;
+                type Error = #error_type;
+            }
         }
     }
 }

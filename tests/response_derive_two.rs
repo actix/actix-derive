@@ -2,33 +2,35 @@ extern crate actix;
 #[macro_use] extern crate actix_derive;
 extern crate futures;
 
+use std::io::Error;
+
 use actix::{msgs, Actor, Address, Arbiter, Context, Handler, Response, System};
 use futures::{future, Future};
 
 #[derive(Message)]
-struct Empty;
+#[rtype(usize, Error)]
+struct Sum(usize, usize);
 
-struct EmptyActor;
+struct SumActor;
 
-impl Actor for EmptyActor {
+impl Actor for SumActor {
     type Context = Context<Self>;
 }
 
-impl Handler<Empty> for EmptyActor {
-    fn handle(&mut self, _message: Empty, _context: &mut Context<Self>) -> Response<Self, Empty> {
-        Self::empty()
+impl Handler<Sum> for SumActor {
+    fn handle(&mut self, message: Sum, _context: &mut Context<Self>) -> Response<Self, Sum> {
+        Self::reply(message.0 + message.1)
     }
 }
 
-#[test]
-fn response_derive_empty() {
+pub fn response_derive_one() {
     let system = System::new("test");
-    let addr: Address<_> = EmptyActor.start();
-    let res = addr.call_fut(Empty);
+    let addr: Address<_> = SumActor.start();
+    let res = addr.call_fut(Sum(10, 5));
     
     system.handle().spawn(res.then(|res| {
         match res {
-            Ok(Ok(result)) => assert!(result == ()),
+            Ok(Ok(result)) => assert!(result == 10 + 5),
             _ => panic!("Something went wrong"),
         }
         

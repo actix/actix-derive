@@ -2,7 +2,7 @@
 
 [![crates.io](http://meritbadge.herokuapp.com/actix-derive)](https://crates.io/crates/actix-derive)
 
-Actix is a rust actor system framework.
+Actix is a rust actor framework.
 
 * [API Documentation (Development)](http://actix.github.io/actix/actix/)
 * [API Documentation (Releases)](https://docs.rs/actix/)
@@ -22,9 +22,38 @@ Actix is licensed under the [Apache-2.0 license](http://opensource.org/licenses/
 extern crate actix;
 #[macro_use] extern crate actix_derive;
 
-use actix::ResponseType;
+use std::io::Error;
 
 #[derive(Message)]
-#[Message(usize)]
+#[rtype(usize, Error)]
 struct Sum(usize, usize);
+
+# fn main() {}
 ```
+
+This code exapnds into following code:
+
+```rust
+# extern crate actix;
+use std::io::Error;
+use actix::ResponseType;
+
+struct Sum(usize, Error);
+
+impl ResponseType for Sum {
+    type Item = usize;
+    type Error = Error;
+}
+# fn main() {}
+```
+
+## License
+
+This project is licensed under either of
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+   http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or
+   http://opensource.org/licenses/MIT)
+
+at your option.
