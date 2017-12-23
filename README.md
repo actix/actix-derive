@@ -28,13 +28,13 @@ use std::io::Error;
 #[rtype(usize, Error)]
 struct Sum(usize, usize);
 
-# fn main() {}
+fn main() {}
 ```
 
 This code exapnds into following code:
 
 ```rust
-# extern crate actix;
+extern crate actix;
 use std::io::Error;
 use actix::ResponseType;
 
@@ -44,7 +44,8 @@ impl ResponseType for Sum {
     type Item = usize;
     type Error = Error;
 }
-# fn main() {}
+
+fn main() {}
 ```
 
 ## License
