@@ -22,14 +22,12 @@ rand = "0.3"
 syn = { version="0.11", features=["full"] }
 
 [dev-dependencies]
-#actix = "^0.3.2"
-actix = { git = "https://github.com/actix/actix" }
+actix = "^0.3.5"
 futures = "0.1"
 skeptic = "0.13"
 
 [build-dependencies]
-#actix = "^0.3.2"
-actix = { git = "https://github.com/actix/actix" }
+actix = "^0.3.5"
 futures = "0.1"
 skeptic = "0.13"
 version_check = "0.1"
