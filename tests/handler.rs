@@ -1,20 +1,16 @@
 #![cfg_attr(actix_nightly, feature(proc_macro,))]
 
-extern crate actix;
 extern crate futures;
-#[macro_use] extern crate actix_derive;
+#[macro_use] extern crate actix;
 
-use actix_derive::actor;
-
-use actix::{msgs, Actor, Address, Arbiter, System};
+use std::io;
+use actix::{msg, actor, msgs, Actor, Address, Arbiter, System};
 use futures::{future, Future};
 
-#[derive(Message)]
-#[rtype(usize)]
+#[msg(usize)]
 struct Sum{a: usize, b: usize}
 
-#[derive(Message)]
-#[rtype(usize)]
+#[msg(usize, io::Error)]
 struct Sum1{a: usize, b: usize}
 
 struct SumActor;
@@ -23,13 +19,13 @@ struct SumActor;
 #[actor(Context<_>)]
 impl SumActor {
 
-    #[simple(Sum1)]
-    fn sum1(&mut self, a: usize, b: usize) -> usize {
+    #[simple(Sum)]
+    fn sum(&mut self, a: usize, b: usize) -> usize {
         a + b
     }
 
-    #[handler(Sum)]
-    fn sum(&mut self, a: usize, b: usize) -> Result<usize, ()> {
+    #[handler(Sum1)]
+    fn sum1(&mut self, a: usize, b: usize) -> Result<usize, io::Error> {
         Ok(a + b)
     }
 }

@@ -17,8 +17,7 @@ Actix is licensed under the [Apache-2.0 license](http://opensource.org/licenses/
 ## Usage
 
 ```rust
-extern crate actix;
-#[macro_use] extern crate actix_derive;
+#[macro_use] extern crate actix;
 
 use std::io::Error;
 
@@ -53,10 +52,9 @@ Actix derive provide proc_macro attributes macro for nightly rust.
 ```rust
 #![feature(proc_macro)]
 extern crate actix;
-#[macro_use] extern crate actix_derive;
+use actix::prelude:*;
 
-#[derive(Message)]
-#[rtype(usize)]
+#[msg(usize)]
 struct Sum {a: usize, b: usize}
 
 struct SumActor;
