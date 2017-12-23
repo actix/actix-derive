@@ -1,6 +1,4 @@
-# actix-derive
-
-[![crates.io](http://meritbadge.herokuapp.com/actix-derive)](https://crates.io/crates/actix-derive)
+# actix-derive [![Build Status](https://travis-ci.org/actix/actix-derive.svg?branch=master)](https://travis-ci.org/actix/actix-derive) [![crates.io](http://meritbadge.herokuapp.com/actix-derive)](https://crates.io/crates/actix-derive)
 
 Actix is a rust actor framework.
 
@@ -43,6 +41,33 @@ struct Sum(usize, Error);
 impl ResponseType for Sum {
     type Item = usize;
     type Error = Error;
+}
+
+fn main() {}
+```
+
+### Handler
+
+Actix derive provide proc_macro attributes macro for nightly rust.
+
+```rust
+#![feature(proc_macro)]
+extern crate actix;
+#[macro_use] extern crate actix_derive;
+
+#[derive(Message)]
+#[rtype(usize)]
+struct Sum {a: usize, b: usize}
+
+struct SumActor;
+
+#[actor(Context<_>)]
+impl SumActor {
+
+    #[simple(Sum)]
+    fn sum(&mut self, a: usize, b: usize) -> usize {
+        a + b
+    }
 }
 
 fn main() {}
