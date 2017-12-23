@@ -1,10 +1,12 @@
 #![cfg_attr(actix_nightly, feature(proc_macro,))]
 
 extern crate futures;
-#[macro_use] extern crate actix;
+extern crate actix;
+extern crate actix_derive;
 
 use std::io;
-use actix::{msg, actor, msgs, Actor, Address, Arbiter, System};
+use actix_derive::{msg, actor};
+use actix::{msgs, Actor, Address, Arbiter, System};
 use futures::{future, Future};
 
 #[msg(usize)]

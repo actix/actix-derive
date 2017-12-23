@@ -23,6 +23,7 @@ impl Handler<Sum> for SumActor {
     }
 }
 
+#[test]
 pub fn response_derive_one() {
     let system = System::new("test");
     let addr: Address<_> = SumActor.start();

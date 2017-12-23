@@ -101,7 +101,7 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
                 impl _actix::Handler<#msg> for #cls {
                     fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
                               -> _actix::Response<Self, #msg> {
-                        Ok(self.#name(#(#args),*)).into()
+                        Self::reply(self.#name(#(#args),*))
                     }
                 }
             }),
@@ -109,7 +109,22 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
                 impl _actix::Handler<#msg> for #cls {
                     fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
                               -> _actix::Response<Self, #msg> {
-                        self.#name(#(#args),*).into()
+                        match self.#name(#(#args),*) {
+                            Ok(item) => Self::reply(item),
+                            Err(err) => Self::reply_error(err)
+                        }
+                    }
+                }
+            }),
+            HandlerType::Stream(msg, err) => Some(quote!{
+                impl _actix::StreamHandler<#msg, #err> for #cls {}
+                impl _actix::Handler<#msg, #err> for #cls {
+                    fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
+                              -> _actix::Response<Self, #msg> {
+                        match self.#name(#(#args),*) {
+                            Ok(item) => Self::reply(item),
+                            Err(err) => Self::reply_error(err)
+                        }
                     }
                 }
             }),
@@ -122,6 +137,7 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
 enum HandlerType {
     Simple(syn::Ident),
     Handler(syn::Ident),
+    Stream(syn::Ident, syn::Ident),
 }
 
 fn parse_attributes(attrs: &mut Vec<syn::Attribute>) -> Option<HandlerType> {
@@ -132,20 +148,41 @@ fn parse_attributes(attrs: &mut Vec<syn::Attribute>) -> Option<HandlerType> {
         match attr.value {
             syn::MetaItem::List(ref name, ref meta) => {
                 match name.as_ref() {
+                    "stream" => {
+                        if meta.len() > 2 {
+                            panic!("#[stream(..)] accepts only two argument");
+                        }
+                        let item = match &meta[0] {
+                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
+                                ident.clone(),
+                            &syn::NestedMetaItem::Literal(ref lit) => {
+                                let s = quote!{ #lit }.to_string();
+                                syn::Ident::from(&s[1..s.len()-1])
+                            },
+                            ref val => panic!("{:?} is not supported", val),
+                        };
+                        let error = match &meta[1] {
+                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
+                                ident.clone(),
+                            &syn::NestedMetaItem::Literal(ref lit) => {
+                                let s = quote!{ #lit }.to_string();
+                                syn::Ident::from(&s[1..s.len()-1])
+                            },
+                            ref val => panic!("{:?} is not supported", val),
+                        };
+                        result = Some(HandlerType::Stream(item, error));
+                    },
                     "handler" => {
                         if meta.len() > 1 {
                             panic!("#[handler(..)] accepts only one argument");
                         }
                         match &meta[0] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) => {
-                                result = Some(HandlerType::Handler(ident.clone()));
-                                break
-                            },
+                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
+                                result = Some(HandlerType::Handler(ident.clone())),
                             &syn::NestedMetaItem::Literal(ref lit) => {
                                 let s = quote!{ #lit }.to_string();
-                                result = Some(
-                                    HandlerType::Handler(syn::Ident::from(&s[1..s.len()-1])));
-                                break
+                                result = Some(HandlerType::Handler(
+                                    syn::Ident::from(&s[1..s.len()-1])));
                             },
                             ref val => panic!("{:?} is not supported", val),
                         }
@@ -155,15 +192,12 @@ fn parse_attributes(attrs: &mut Vec<syn::Attribute>) -> Option<HandlerType> {
                             panic!("#[simple(..)] accepts only one argument");
                         }
                         match &meta[0] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) => {
-                                result = Some(HandlerType::Simple(ident.clone()));
-                                break
-                            },
+                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
+                                result = Some(HandlerType::Simple(ident.clone())),
                             &syn::NestedMetaItem::Literal(ref lit) => {
                                 let s = quote!{ #lit }.to_string();
-                                result = Some(
-                                    HandlerType::Simple(syn::Ident::from(&s[1..s.len()-1])));
-                                break
+                                result = Some(HandlerType::Simple(
+                                    syn::Ident::from(&s[1..s.len()-1])));
                             },
                             ref val => panic!("{:?} is not supported", val),
                         }
