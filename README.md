@@ -51,6 +51,7 @@ Actix derive provide proc_macro attributes macro for nightly rust.
 
 ```rust
 #![feature(proc_macro)]
+
 extern crate actix;
 use actix::prelude:*;
 
