@@ -1,3 +1,4 @@
+#![cfg(actix_nightly)]
 #![cfg_attr(actix_nightly, feature(proc_macro,))]
 
 extern crate futures;
@@ -17,7 +18,6 @@ struct Sum1{a: usize, b: usize}
 
 struct SumActor;
 
-#[cfg(actix_nightly)]
 #[actor(Context<_>)]
 impl SumActor {
 
@@ -32,7 +32,6 @@ impl SumActor {
     }
 }
 
-#[cfg(actix_nightly)]
 #[test]
 fn test_handlers() {
     let system = System::new("test");
