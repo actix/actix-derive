@@ -16,6 +16,9 @@ struct Sum{a: usize, b: usize}
 #[msg(usize, io::Error)]
 struct Sum1{a: usize, b: usize}
 
+#[msg]
+struct Empty;
+
 struct SumActor;
 
 #[actor(Context<_>)]
@@ -29,6 +32,11 @@ impl SumActor {
     #[handler(Sum1)]
     fn sum1(&mut self, a: usize, b: usize) -> Result<usize, io::Error> {
         Ok(a + b)
+    }
+
+    #[simple(Empty)]
+    fn empty(&mut self, ctx: &mut actix::Context<Self>) {
+        println!("empty");
     }
 }
 

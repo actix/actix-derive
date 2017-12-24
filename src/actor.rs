@@ -64,6 +64,7 @@ fn impl_handler(ty: &Box<syn::Ty>, impls: &mut Vec<syn::ImplItem>, ctx: Option<s
                     unused_qualifications, unused_variables, unused_imports)]
             const #dummy_const: () = {
                 extern crate actix as _actix;
+                use actix::{Context, FramedContext};
 
                 #(#handlers)*
             };
