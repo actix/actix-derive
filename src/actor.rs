@@ -48,8 +48,8 @@ fn impl_handler(ty: &Box<syn::Ty>, impls: &mut Vec<syn::ImplItem>, ctx: Option<s
             #[allow(non_upper_case_globals, unused_attributes,
                     unused_qualifications, unused_variables, unused_imports)]
             const #dummy_const: () = {
-                extern crate actix as _actix;
-                use actix::{Context, FramedContext};
+                extern crate actix;
+                use actix::{Actor, Context, FramedContext};
 
                 impl Actor for #ty {
                     type Context = #ctx;
@@ -63,8 +63,8 @@ fn impl_handler(ty: &Box<syn::Ty>, impls: &mut Vec<syn::ImplItem>, ctx: Option<s
             #[allow(non_upper_case_globals, unused_attributes,
                     unused_qualifications, unused_variables, unused_imports)]
             const #dummy_const: () = {
-                extern crate actix as _actix;
-                use actix::{Context, FramedContext};
+                extern crate actix;
+                use actix::{Actor, Context, FramedContext};
 
                 #(#handlers)*
             };
@@ -98,17 +98,17 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
 
         match msg {
             HandlerType::Simple(msg) => Some(quote!{
-                impl _actix::Handler<#msg> for #cls {
+                impl actix::Handler<#msg> for #cls {
                     fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
-                              -> _actix::Response<Self, #msg> {
+                              -> actix::Response<Self, #msg> {
                         Self::reply(self.#name(#(#args),*))
                     }
                 }
             }),
             HandlerType::Handler(msg) => Some(quote!{
-                impl _actix::Handler<#msg> for #cls {
+                impl actix::Handler<#msg> for #cls {
                     fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
-                              -> _actix::Response<Self, #msg> {
+                              -> actix::Response<Self, #msg> {
                         match self.#name(#(#args),*) {
                             Ok(item) => Self::reply(item),
                             Err(err) => Self::reply_error(err)
@@ -117,10 +117,10 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
                 }
             }),
             HandlerType::Stream(msg, err) => Some(quote!{
-                impl _actix::StreamHandler<#msg, #err> for #cls {}
-                impl _actix::Handler<#msg, #err> for #cls {
+                impl actix::StreamHandler<#msg, #err> for #cls {}
+                impl actix::Handler<#msg, #err> for #cls {
                     fn handle(&mut self, msg: #msg, ctx: &mut Self::Context)
-                              -> _actix::Response<Self, #msg> {
+                              -> actix::Response<Self, #msg> {
                         match self.#name(#(#args),*) {
                             Ok(item) => Self::reply(item),
                             Err(err) => Self::reply_error(err)

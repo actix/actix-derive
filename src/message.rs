@@ -1,5 +1,6 @@
 use quote;
 use syn;
+use rand::{Rng, thread_rng};
 
 pub const MESSAGE_ATTR: &str = "rtype";
 
@@ -84,17 +85,20 @@ pub fn message_attr(ast: &mut syn::Item, types: Vec<syn::Path>) -> quote::Tokens
 
             let item_type = item.unwrap_or(syn::Ty::Tup(vec![]));
             let error_type = error.unwrap_or(syn::Ty::Tup(vec![]));
-            let dummy_const = syn::Ident::new(format!("_IMPL_ACT_{}", name).to_lowercase());
+            let dummy_const = syn::Ident::new(
+                format!("_impl_act_{}_{}", name, thread_rng().gen::<u32>()));
 
             return quote!{
-                mod #dummy_const {
+                #[allow(non_upper_case_globals, unused_attributes,
+                        unused_qualifications, unused_variables, unused_imports)]
+                const #dummy_const: () = {
                     extern crate actix;
 
                     impl #impl_generics actix::ResponseType for #name #ty_generics #where_clause {
                         type Item = #item_type;
                         type Error = #error_type;
                     }
-                }
+                };
             }
         },
         _ => (),
