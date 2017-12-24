@@ -81,12 +81,11 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
             match input {
                 &syn::FnArg::Captured(ref pat, _) => {
                     match pat {
-                        &syn::Pat::Ident(_, ref name, _) =>
-                            if name.as_ref() == "ctx" {
-                                args.push(quote!{ctx,});
-                            } else {
-                                args.push(quote!{msg.#name});
-                            }
+                        &syn::Pat::Ident(_, ref name, _) => if name.as_ref() == "ctx" {
+                            args.push(quote!{ctx,});
+                        } else {
+                            args.push(quote!{msg.#name});
+                        },
                         _ =>
                             panic!("unsupported argument: {:?}", pat),
                     }
