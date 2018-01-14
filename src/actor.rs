@@ -1,47 +1,37 @@
 // Copyright (c) 2017-present PyActix Project and Contributors
 
 use syn;
-use quote::Tokens;
+use syn::{Attribute, FnArg, Ident, Item, ImplItem, Meta, MethodSig, NestedMeta, Pat, Path, Type, TypePath};
+use quote::{Tokens, ToTokens};
 use rand::{Rng, thread_rng};
 
 
-pub fn build_handler(ast: &mut syn::Item, ctx: Option<syn::Path>) -> Tokens {
-    match ast.node {
-        syn::ItemKind::Impl(_, _, _, ref path, ref ty, ref mut impl_items) => {
-            if path.is_none() {
-                return impl_handler(ty, impl_items, ctx)
-            }
-        },
-        _ => (),
+pub fn build_handler(ast: &mut Item, ctx: Option<Path>) -> Tokens {
+    if let &mut Item::Impl(ref mut item_impl) = ast {
+        if item_impl.trait_.is_none() {
+            return impl_handler(&item_impl.self_ty, &mut item_impl.items, ctx)
+        }
     }
+
     panic!("#[handler] can only be used with Impl blocks")
 }
 
-fn impl_handler(ty: &Box<syn::Ty>, impls: &mut Vec<syn::ImplItem>, ctx: Option<syn::Path>)
-                -> Tokens
-{
+fn impl_handler(ty: &Box<Type>, impls: &mut Vec<ImplItem>, ctx: Option<Path>) -> Tokens {
     // get method names in impl block
     let mut handlers = Vec::new();
     for iimpl in impls.iter_mut() {
-        match iimpl.node {
-            syn::ImplItemKind::Method(ref mut sig, _) => {
-                if let Some(handle) = gen_handler(ty, &iimpl.ident, sig, &mut iimpl.attrs) {
-                    handlers.push(handle)
-                }
-            },
-            _ => (),
+        if let &mut ImplItem::Method(ref mut method) = iimpl {
+            if let Some(handle) = gen_handler(ty, &mut method.sig, &mut method.attrs) {
+                handlers.push(handle);
+            }
         }
     }
 
     let n = match ty.as_ref() {
-        &syn::Ty::Path(_, ref p) => {
-            p.segments.last().as_ref().unwrap().ident.as_ref()
-        }
+        &Type::Path(ref type_path) => type_path.path.segments.last().unwrap().value().ident.as_ref(),
         _ => "handlers"
     };
-
-    let dummy_const = syn::Ident::new(
-        format!("_impl_handlers_{}_{}", thread_rng().gen::<u32>(), n));
+    let dummy_const = Ident::from(format!("_impl_handlers_{}_{}", thread_rng().gen::<u32>(), n));
 
     if let Some(ctx) = ctx {
         quote! {
@@ -72,30 +62,29 @@ fn impl_handler(ty: &Box<syn::Ty>, impls: &mut Vec<syn::ImplItem>, ctx: Option<s
     }
 }
 
-fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
-               sig: &mut syn::MethodSig, attrs: &mut Vec<syn::Attribute>) -> Option<Tokens>
-{
+fn gen_handler(cls: &Box<Type>, sig: &mut MethodSig, attrs: &mut Vec<Attribute>) -> Option<Tokens> {
+    let name = sig.ident;
     if let Some(msg) = parse_attributes(attrs) {
-        // list arguments
         let mut args = Vec::new();
         for input in sig.decl.inputs.iter() {
             match input {
-                &syn::FnArg::Captured(ref pat, ref ty) => {
-                    match pat {
-                        &syn::Pat::Ident(_, ref name, _) => {
-                            if name.as_ref() == "ctx" {
+                &FnArg::Captured(ref arg) => {
+                    match arg.pat {
+                        Pat::Ident(ref ident) => {
+                            if ident.ident.as_ref() == "ctx" {
                                 args.push(quote!{ctx,});
                                 continue;
                             }
 
-                            if let &syn::Ty::Path(_, ref path) = ty {
+                            if let Type::Path(ref path) = arg.ty {
                                 let msg_ty = match msg {
                                     HandlerType::Simple(ref ty) => ty,
                                     HandlerType::Handler(ref ty) => ty,
                                     HandlerType::Stream(ref ty, _) => ty,
                                 };
+                                let msg_ty: TypePath = syn::parse(msg_ty.into_tokens().into()).unwrap();
 
-                                if path == &msg_ty.as_ref().into() {
+                                if *path == msg_ty {
                                     args.push(quote!{msg});
                                     continue;
                                 }
@@ -103,12 +92,11 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
 
                             args.push(quote!{msg.#name});
                         },
-                        _ =>
-                            panic!("unsupported argument: {:?}", pat),
+                        _ => panic!("unsupported argument: {:?}", arg.pat),
                     }
                 }
-                &syn::FnArg::SelfRef(_, _) | &syn::FnArg::SelfValue(_) => (),
-                &syn::FnArg::Ignored(_) => panic!("ignored argument: {:?}", name),
+                &FnArg::SelfRef(_) | &FnArg::SelfValue(_) => (),
+                _ => panic!("unsupported argument: {:?}", name),
             }
         }
 
@@ -151,81 +139,70 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
 }
 
 enum HandlerType {
-    Simple(syn::Ident),
-    Handler(syn::Ident),
-    Stream(syn::Ident, syn::Ident),
+    Simple(Ident),
+    Handler(Ident),
+    Stream(Ident, Ident),
 }
 
-fn parse_attributes(attrs: &mut Vec<syn::Attribute>) -> Option<HandlerType> {
+fn parse_attributes(attrs: &mut Vec<Attribute>) -> Option<HandlerType> {
     let mut result = None;
-    let mut new_attrs = Vec::new();
 
-    for attr in attrs.iter() {
-        match attr.value {
-            syn::MetaItem::List(ref name, ref meta) => {
-                match name.as_ref() {
+    for attr in attrs.clone().iter() {
+        let meta = attr.interpret_meta()?;
+        match meta {
+            Meta::List(ref metalist) => {
+                let parse_lit = |lit: &syn::Lit| -> Ident {
+                    syn::parse(lit.into_tokens().into()).unwrap()
+                };
+
+                match metalist.ident.as_ref() {
                     "stream" => {
-                        if meta.len() > 2 {
+                        if metalist.nested.len() > 2 {
                             panic!("#[stream(..)] accepts only two argument");
                         }
-                        let item = match &meta[0] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
-                                ident.clone(),
-                            &syn::NestedMetaItem::Literal(ref lit) => {
-                                let s = quote!{ #lit }.to_string();
-                                syn::Ident::from(&s[1..s.len()-1])
-                            },
-                            ref val => panic!("{:?} is not supported", val),
+                        let ident = |nested: &NestedMeta| {
+                            match nested {
+                                &NestedMeta::Meta(Meta::Word(ref ident)) => ident.clone(),
+                                &NestedMeta::Literal(ref lit) => parse_lit(lit),
+                                ref val => panic!("{:?} is not supported", val),
+                            }
                         };
-                        let error = match &meta[1] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
-                                ident.clone(),
-                            &syn::NestedMetaItem::Literal(ref lit) => {
-                                let s = quote!{ #lit }.to_string();
-                                syn::Ident::from(&s[1..s.len()-1])
-                            },
-                            ref val => panic!("{:?} is not supported", val),
-                        };
+
+                        let item = ident(&metalist.nested[0]);
+                        let error = ident(&metalist.nested[1]);
                         result = Some(HandlerType::Stream(item, error));
+                        attrs.remove_item(attr);
                     },
                     "handler" => {
-                        if meta.len() > 1 {
+                        if metalist.nested.len() > 1 {
                             panic!("#[handler(..)] accepts only one argument");
                         }
-                        match &meta[0] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
-                                result = Some(HandlerType::Handler(ident.clone())),
-                            &syn::NestedMetaItem::Literal(ref lit) => {
-                                let s = quote!{ #lit }.to_string();
-                                result = Some(HandlerType::Handler(
-                                    syn::Ident::from(&s[1..s.len()-1])));
-                            },
+
+                        match &metalist.nested[0] {
+                            &NestedMeta::Meta(Meta::Word(ref ident)) => result = Some(HandlerType::Handler(ident.clone())),
+                            &NestedMeta::Literal(ref lit) => result = Some(HandlerType::Handler(parse_lit(lit))),
                             ref val => panic!("{:?} is not supported", val),
                         }
+                        attrs.remove_item(attr);
                     },
                     "simple" => {
-                        if meta.len() > 1 {
+                        if metalist.nested.len() > 1 {
                             panic!("#[simple(..)] accepts only one argument");
                         }
-                        match &meta[0] {
-                            &syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref ident)) =>
-                                result = Some(HandlerType::Simple(ident.clone())),
-                            &syn::NestedMetaItem::Literal(ref lit) => {
-                                let s = quote!{ #lit }.to_string();
-                                result = Some(HandlerType::Simple(
-                                    syn::Ident::from(&s[1..s.len()-1])));
-                            },
+
+                        match &metalist.nested[0] {
+                            &NestedMeta::Meta(Meta::Word(ref ident)) => result = Some(HandlerType::Simple(ident.clone())),
+                            &NestedMeta::Literal(ref lit) => result = Some(HandlerType::Handler(parse_lit(lit))),
                             ref val => panic!("{:?} is not supported", val),
-                        }
+                        };
+                        attrs.remove_item(attr);
                     },
-                    _ => new_attrs.push(attr.clone()),
+                    _ => (),
                 }
             },
-            _ => new_attrs.push(attr.clone()),
+            _ => (),
         }
     }
-    attrs.clear();
-    attrs.extend(new_attrs);
 
     result
 }
