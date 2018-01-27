@@ -28,7 +28,7 @@ struct Sum(usize, usize);
 fn main() {}
 ```
 
-This code exapnds into following code:
+This code expands into following code:
 
 ```rust
 extern crate actix;
