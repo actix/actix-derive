@@ -1,5 +1,9 @@
 # Changes
 
+## 0.2.0 (2018-02-xx)
+
+* Actix 0.5 support
+
 ## 0.1.1 (2017-12-23)
 
 * Move tests to actix

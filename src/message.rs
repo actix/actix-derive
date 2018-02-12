@@ -5,18 +5,15 @@ use rand::{Rng, thread_rng};
 pub const MESSAGE_ATTR: &str = "rtype";
 
 pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
-    let (item_type, error_type) = {
+    let item_type = {
         match get_attribute_type_multiple(ast, MESSAGE_ATTR) {
             Some(ty) => {
                 match ty.len() {
-                    1 => (ty[0].clone(), None),
-                    2 => (ty[0].clone(), ty[1].clone()),
+                    1 => ty[0].clone(),
                     _ => panic!("#[{}(type, type)] takes 2 parameters, given {}", MESSAGE_ATTR, ty.len()),
                 }
             },
-            None => {
-                (None, None)
-            }
+            None => None,
         }
 
     };
@@ -25,16 +22,14 @@ pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
     let item_type = item_type.unwrap_or(syn::Ty::Tup(vec![]));
-    let error_type = error_type.unwrap_or(syn::Ty::Tup(vec![]));
     let dummy_const = syn::Ident::new(format!("_IMPL_ACT_{}", name).to_lowercase());
 
     quote!{
         mod #dummy_const {
             extern crate actix;
 
-            impl #impl_generics actix::ResponseType for #name #ty_generics #where_clause {
-                type Item = #item_type;
-                type Error = #error_type;
+            impl #impl_generics actix::Message for #name #ty_generics #where_clause {
+                type Result = #item_type;
             }
         }
     }
@@ -72,19 +67,16 @@ fn meta_item_to_ty(meta_item: &syn::NestedMetaItem, name: &str) -> Option<syn::T
 pub fn message_attr(ast: &mut syn::Item, types: Vec<syn::Path>) -> quote::Tokens {
     match ast.node {
         syn::ItemKind::Struct(_, ref gen) => {
-            let (item, error) = match types.len() {
-                0 => (None, None),
-                1 => (Some(syn::Ty::Path(None, types[0].clone())), None),
-                2 => (Some(syn::Ty::Path(None, types[0].clone())),
-                      Some(syn::Ty::Path(None, types[1].clone()))),
-                _ => panic!("#[msg(type, type)] takes 2 parameters, given {}", types.len()),
+            let item = match types.len() {
+                0 => None,
+                1 => Some(syn::Ty::Path(None, types[0].clone())),
+                _ => panic!("#[msg(type)] takes 1 parameters, given {}", types.len()),
             };
 
             let name = &ast.ident;
             let (impl_generics, ty_generics, where_clause) = gen.split_for_impl();
 
             let item_type = item.unwrap_or(syn::Ty::Tup(vec![]));
-            let error_type = error.unwrap_or(syn::Ty::Tup(vec![]));
             let dummy_const = syn::Ident::new(
                 format!("_impl_act_{}_{}", name, thread_rng().gen::<u32>()));
 
@@ -94,9 +86,8 @@ pub fn message_attr(ast: &mut syn::Item, types: Vec<syn::Path>) -> quote::Tokens
                 const #dummy_const: () = {
                     extern crate actix;
 
-                    impl #impl_generics actix::ResponseType for #name #ty_generics #where_clause {
-                        type Item = #item_type;
-                        type Error = #error_type;
+                    impl #impl_generics actix::Message for #name #ty_generics #where_clause {
+                        type Result = #item_type;
                     }
                 };
             }
