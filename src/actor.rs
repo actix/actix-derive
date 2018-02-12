@@ -80,11 +80,27 @@ fn gen_handler(cls: &Box<syn::Ty>, name: &syn::Ident,
         let mut args = Vec::new();
         for input in sig.decl.inputs.iter() {
             match input {
-                &syn::FnArg::Captured(ref pat, _) => {
+                &syn::FnArg::Captured(ref pat, ref ty) => {
                     match pat {
-                        &syn::Pat::Ident(_, ref name, _) => if name.as_ref() == "ctx" {
-                            args.push(quote!{ctx,});
-                        } else {
+                        &syn::Pat::Ident(_, ref name, _) => {
+                            if name.as_ref() == "ctx" {
+                                args.push(quote!{ctx,});
+                                continue;
+                            }
+
+                            if let &syn::Ty::Path(_, ref path) = ty {
+                                let msg_ty = match msg {
+                                    HandlerType::Simple(ref ty) => ty,
+                                    HandlerType::Handler(ref ty) => ty,
+                                    HandlerType::Stream(ref ty, _) => ty,
+                                };
+
+                                if path == &msg_ty.as_ref().into() {
+                                    args.push(quote!{msg});
+                                    continue;
+                                }
+                            }
+
                             args.push(quote!{msg.#name});
                         },
                         _ =>
