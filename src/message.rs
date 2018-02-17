@@ -10,12 +10,11 @@ pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
             Some(ty) => {
                 match ty.len() {
                     1 => ty[0].clone(),
-                    _ => panic!("#[{}(type, type)] takes 2 parameters, given {}", MESSAGE_ATTR, ty.len()),
+                    _ => panic!("#[{}(type)] takes 1 parameters, given {}", MESSAGE_ATTR, ty.len()),
                 }
             },
             None => None,
         }
-
     };
 
     let name = &ast.ident;
@@ -53,14 +52,25 @@ fn get_attribute_type_multiple(ast: &syn::DeriveInput, name: &str) -> Option<Vec
 }
 
 fn meta_item_to_ty(meta_item: &syn::NestedMetaItem, name: &str) -> Option<syn::Ty> {
-    if let syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref i)) = *meta_item {
-        let ty = syn::parse::ty(i.as_ref());
-        match ty {
-            syn::parse::IResult::Done(_, ty) => Some(ty),
-            _ => None,
-        }
-    } else {
-        panic!("The correct syntax is #[{}(type)]", name);
+    match *meta_item {
+        syn::NestedMetaItem::MetaItem(syn::MetaItem::Word(ref i)) => {
+            let ty = syn::parse::ty(i.as_ref());
+            match ty {
+                syn::parse::IResult::Done(_, ty) => Some(ty),
+                _ => None,
+            }
+        },
+        syn::NestedMetaItem::MetaItem(syn::MetaItem::NameValue(ref ident, ref i)) =>
+        {
+            if ident == "result" {
+                if let &syn::Lit::Str(ref s, _) = i {
+                    let ty = syn::parse_type(s).unwrap();
+                    return Some(ty);
+                }
+            }
+            panic!("The correct syntax is #[{}(result=\"TYPE\")]", name);
+        },
+        _ => panic!("The correct syntax is #[{}(type)]", name),
     }
 }
 

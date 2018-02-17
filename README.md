@@ -22,7 +22,7 @@ Actix is licensed under the [Apache-2.0 license](http://opensource.org/licenses/
 use std::io::Error;
 
 #[derive(Message)]
-#[rtype(usize, Error)]
+#[rtype(result="Result<usize, Error>")]
 struct Sum(usize, usize);
 
 fn main() {}
@@ -33,13 +33,12 @@ This code expands into following code:
 ```rust
 extern crate actix;
 use std::io::Error;
-use actix::ResponseType;
+use actix::Message;
 
 struct Sum(usize, Error);
 
-impl ResponseType for Sum {
-    type Item = usize;
-    type Error = Error;
+impl Message for Sum {
+    type Result = Result<usize, Error>;
 }
 
 fn main() {}
