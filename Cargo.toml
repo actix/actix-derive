@@ -17,7 +17,7 @@ proc-macro = true
 
 [dependencies]
 quote = "0.3"
-rand = "0.3"
+rand = "0.4"
 syn = { version="0.11", features=["full"] }
 
 [build-dependencies]
