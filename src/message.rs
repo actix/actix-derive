@@ -27,7 +27,7 @@ pub fn expand(ast: &syn::DeriveInput) -> quote::Tokens {
         mod #dummy_const {
             extern crate actix;
 
-            impl #impl_generics actix::Message for #name #ty_generics #where_clause {
+            impl #impl_generics actix::Message for super::#name #ty_generics #where_clause {
                 type Result = #item_type;
             }
         }
