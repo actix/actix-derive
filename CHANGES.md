@@ -1,5 +1,10 @@
 # Changes
 
+## 0.2.1 (2018-07-20)
+
+* Fix warning in rustc 1.29.0-nightly #9
+
+
 ## 0.2.0 (2018-02-xx)
 
 * Actix 0.5 support
