@@ -44,34 +44,6 @@ impl Message for Sum {
 fn main() {}
 ```
 
-### Handler
-
-Actix derive provide proc_macro attributes macro for nightly rust.
-
-```rust
-#![feature(proc_macro)]
-
-extern crate actix;
-extern crate actix_derive;
-use actix_derive::*;
-
-#[msg(usize)]
-struct Sum {a: usize, b: usize}
-
-struct SumActor;
-
-#[actor(Context<_>)]
-impl SumActor {
-
-    #[simple(Sum)]
-    fn sum(&mut self, a: usize, b: usize) -> usize {
-        a + b
-    }
-}
-
-fn main() {}
-```
-
 ## License
 
 This project is licensed under either of
