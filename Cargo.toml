@@ -1,6 +1,6 @@
 [package]
 name = "actix_derive"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["Callym <hi@callym.com>", "Nikolay Kim <fafhrd91@gmail.com>"]
 description = "Actor framework for Rust"
 readme = "README.md"
@@ -10,15 +10,11 @@ repository = "https://github.com/actix/actix-derive.git"
 documentation = "https://docs.rs/actix-derive/"
 license = "MIT/Apache-2.0"
 exclude = [".gitignore", ".travis.yml", ".cargo/config", "appveyor.yml"]
-build = "build.rs"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-quote = "0.3"
-rand = "0.5"
-syn = { version="0.11", features=["full"] }
-
-[build-dependencies]
-version_check = "0.1"
+quote = "0.6"
+syn = { version="0.14", features=["full"] }
+proc-macro2 = "0.4"
