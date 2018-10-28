@@ -1,5 +1,9 @@
 # Changes
 
+## 0.3.1 (2018-10-28)
+
+* Upgrade `syn` crate to 0.15
+
 ## 0.3.0 (2018-07-20)
 
 * Fix warning in rustc 1.29.0-nightly #9
