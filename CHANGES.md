@@ -1,6 +1,6 @@
 # Changes
 
-## 0.3.2 (2018-11-xx)
+## 0.3.2 (2018-11-04)
 
 * Fix another warning in rustc 1.29 or later #12
 
