@@ -33,9 +33,10 @@ pub fn expand(ast: &syn::DeriveInput) -> TokenStream {
 
     quote!{
         mod #dummy_const {
+            use super::*;
             extern crate actix;
 
-            impl #impl_generics actix::Message for super::#name #ty_generics #where_clause {
+            impl #impl_generics actix::Message for #name #ty_generics #where_clause {
                 #item_type
             }
         }
