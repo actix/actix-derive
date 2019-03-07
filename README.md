@@ -25,6 +25,9 @@ use std::io::Error;
 #[rtype(result="Result<usize, Error>")]
 struct Sum(usize, usize);
 
+#[derive(MessageResponse)]
+struct Added(usize);
+
 fn main() {}
 ```
 
@@ -33,12 +36,28 @@ This code expands into following code:
 ```rust
 extern crate actix;
 use std::io::Error;
+use actix::dev::MessageResponse;
+use actix::dev::ResponseChannel;
 use actix::Message;
 
 struct Sum(usize, Error);
 
 impl Message for Sum {
     type Result = Result<usize, Error>;
+}
+
+struct Added(usize);
+
+impl<A, M> MessageResponse<A, M> for Added
+where
+  A: Actor,
+  M: Message<Result = Added>
+{
+    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
+        if let Some(tx) = tx {
+            tx.send(self);
+        }
+    }
 }
 
 fn main() {}
