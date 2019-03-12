@@ -1,5 +1,9 @@
 # Changes
 
+## 0.4.0 (2019-03-12)
+
+* Added `MessageResponse` proc derive macro
+
 ## 0.3.2 (2018-11-04)
 
 * Fix another warning in rustc 1.29 or later #12
