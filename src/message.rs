@@ -1,100 +1,107 @@
-use proc_macro2::{Ident, Span, TokenStream};
-use syn;
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, ToTokens};
 
 pub const MESSAGE_ATTR: &str = "rtype";
 
 pub fn expand(ast: &syn::DeriveInput) -> TokenStream {
     let item_type = {
         match get_attribute_type_multiple(ast, MESSAGE_ATTR) {
-            Some(ty) => match ty.len() {
+            Ok(ty) => match ty.len() {
                 1 => ty[0].clone(),
-                _ => panic!(
-                    "#[{}(type)] takes 1 parameters, given {}",
-                    MESSAGE_ATTR,
-                    ty.len()
-                ),
+                _ => {
+                    return syn::Error::new(
+                        Span::call_site(),
+                        format!(
+                            "#[{}(type)] takes 1 parameters, given {}",
+                            MESSAGE_ATTR,
+                            ty.len()
+                        ),
+                    )
+                    .to_compile_error()
+                }
             },
-            None => None,
+            Err(err) => return err.to_compile_error(),
         }
     };
 
     let name = &ast.ident;
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let item_type = match item_type {
-        Some(ty) => quote!{ type Result = #ty; },
-        None => quote!{ type Result = (); },
-    };
+    let item_type = item_type
+        .map(ToTokens::into_token_stream)
+        .unwrap_or_else(|| quote! { () });
 
-    let dummy_const = Ident::new(
-        &format!("_IMPL_ACT_{}", name).to_lowercase(),
-        Span::call_site(),
-    );
-
-    quote!{
-        mod #dummy_const {
-            use super::*;
-            extern crate actix;
-
-            impl #impl_generics actix::Message for #name #ty_generics #where_clause {
-                #item_type
-            }
+    quote! {
+        impl #impl_generics ::actix::Message for #name #ty_generics #where_clause {
+            type Result = #item_type;
         }
     }
 }
 
 fn get_attribute_type_multiple(
-    ast: &syn::DeriveInput, name: &str,
-) -> Option<Vec<Option<syn::Type>>> {
-    let attr = ast.attrs.iter().find(|a| {
-        let a = a.interpret_meta();
-        match a {
-            Some(ref meta) if meta.name() == name => true,
-            _ => false,
-        }
-    })?;
-    let attr = attr.interpret_meta()?;
+    ast: &syn::DeriveInput,
+    name: &str,
+) -> syn::Result<Vec<Option<syn::Type>>> {
+    let attr = ast
+        .attrs
+        .iter()
+        .find_map(|a| {
+            let a = a.parse_meta();
+            match a {
+                Ok(meta) => {
+                    if meta.path().is_ident(name) {
+                        Some(meta)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            }
+        })
+        .ok_or_else(|| {
+            syn::Error::new(Span::call_site(), format!("Expect a attribute `{}`", name))
+        })?;
 
     if let syn::Meta::List(ref list) = attr {
-        Some(
-            list.nested
-                .iter()
-                .map(|m| meta_item_to_ty(m, name))
-                .collect(),
-        )
+        Ok(list
+            .nested
+            .iter()
+            .map(|m| meta_item_to_ty(m).ok())
+            .collect())
     } else {
-        panic!("The correct syntax is #[{}(type, type, ...)]", name);
+        return Err(syn::Error::new_spanned(
+            attr,
+            format!("The correct syntax is #[{}(type, type, ...)]", name),
+        ));
     }
 }
 
-fn meta_item_to_ty(meta_item: &syn::NestedMeta, name: &str) -> Option<syn::Type> {
-    match *meta_item {
-        syn::NestedMeta::Meta(syn::Meta::Word(ref i)) => {
-            if let Ok(ty) = syn::parse_str::<syn::Type>(&i.to_string()) {
-                Some(ty)
-            } else {
-                panic!("The correct syntax is #[{}(type)]", name);
-            }
-        }
-        syn::NestedMeta::Meta(syn::Meta::NameValue(ref val)) => {
-            if val.ident == "result" {
+fn meta_item_to_ty(meta_item: &syn::NestedMeta) -> syn::Result<syn::Type> {
+    match meta_item {
+        syn::NestedMeta::Meta(syn::Meta::Path(ref path)) => match path.get_ident() {
+            Some(ident) => syn::parse_str::<syn::Type>(&ident.to_string())
+                .map_err(|_| syn::Error::new_spanned(ident, "Expect type")),
+            None => Err(syn::Error::new_spanned(path, "Expect type")),
+        },
+        syn::NestedMeta::Meta(syn::Meta::NameValue(val)) => match val.path.get_ident() {
+            Some(ident) if ident == "result" => {
                 if let syn::Lit::Str(ref s) = val.lit {
-                    if let Ok(ty) = syn::parse_str::<syn::Type>(&s.value().to_string()) {
-                        return Some(ty);
-                    } else {
-                        panic!("The correct syntax is #[{}(type)]", name);
+                    if let Ok(ty) = syn::parse_str::<syn::Type>(&s.value()) {
+                        return Ok(ty);
                     }
                 }
+                Err(syn::Error::new_spanned(&val.lit, "Expect type"))
             }
-            panic!("The correct syntax is #[{}(result=\"TYPE\")]", name);
+            _ => Err(syn::Error::new_spanned(
+                &val.lit,
+                r#"Expect `result = "TYPE"`"#,
+            )),
+        },
+        syn::NestedMeta::Lit(syn::Lit::Str(ref s)) => {
+            syn::parse_str::<syn::Type>(&s.value())
+                .map_err(|_| syn::Error::new_spanned(s, "Expect type"))
         }
-        syn::NestedMeta::Literal(syn::Lit::Str(ref s)) => {
-            if let Ok(ty) = syn::parse_str::<syn::Type>(&s.value().to_string()) {
-                return Some(ty);
-            } else {
-                panic!("The correct syntax is #[{}(type)]", name);
-            }
-        }
-        _ => panic!("The correct syntax is #[{}(type)]", name),
+
+        meta => Err(syn::Error::new_spanned(meta, "Expect type")),
     }
 }

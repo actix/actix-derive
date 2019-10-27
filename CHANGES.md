@@ -1,5 +1,9 @@
 # Changes
 
+## UNRELEASE
+
+* Update syn & quote to 1.0
+
 ## 0.4.0 (2019-03-12)
 
 * Added `MessageResponse` proc derive macro
