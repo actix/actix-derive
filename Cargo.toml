@@ -21,4 +21,4 @@ syn = { version = "1", features = ["full"] }
 proc-macro2 = "1"
 
 [dev-dependencies]
-actix = { version = "0.8.3", default-features = false }
+actix = { version = "0.10.0-alpha.2", default-features = false }
