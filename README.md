@@ -1,14 +1,12 @@
-# actix-derive [![Build Status](https://travis-ci.org/actix/actix-derive.svg?branch=master)](https://travis-ci.org/actix/actix-derive) [![crates.io](http://meritbadge.herokuapp.com/actix-derive)](https://crates.io/crates/actix-derive)
+# actix-derive [![Build Status](https://travis-ci.org/actix/actix-derive.svg?branch=master)](https://travis-ci.org/actix/actix-derive) [![crates.io](https://img.shields.io/crates/v/actix-derive)](https://crates.io/crates/actix-derive)
 
 Actix is a rust actor framework.
 
-* [API Documentation (Development)](http://actix.github.io/actix/actix/)
+* [API Documentation (Development)](https://actix.github.io/actix/actix/)
 * [API Documentation (Releases)](https://docs.rs/actix/)
 * Cargo package: [actix](https://crates.io/crates/actix)
 
 ---
-
-Actix is licensed under the [Apache-2.0 license](http://opensource.org/licenses/APACHE-2.0).
 
 ## Features
 
@@ -17,16 +15,14 @@ Actix is licensed under the [Apache-2.0 license](http://opensource.org/licenses/
 ## Usage
 
 ```rust
-#[macro_use] extern crate actix_derive;
-
-use std::io::Error;
-
-#[derive(Message)]
-#[rtype(result="Result<usize, Error>")]
-struct Sum(usize, usize);
+use actix_derive::{Message, MessageResponse};
 
 #[derive(MessageResponse)]
 struct Added(usize);
+
+#[derive(Message)]
+#[rtype(result = "Added")]
+struct Sum(usize, usize);
 
 fn main() {}
 ```
@@ -34,29 +30,27 @@ fn main() {}
 This code expands into following code:
 
 ```rust
-extern crate actix;
-use std::io::Error;
-use actix::dev::MessageResponse;
-use actix::dev::ResponseChannel;
-use actix::Message;
+use actix::{Actor, Context, Handler, System};
+use actix_derive::{Message, MessageResponse};
 
-struct Sum(usize, Error);
-
-impl Message for Sum {
-    type Result = Result<usize, Error>;
-}
-
+#[derive(MessageResponse)]
 struct Added(usize);
 
-impl<A, M> MessageResponse<A, M> for Added
-where
-  A: Actor,
-  M: Message<Result = Added>
-{
-    fn handle<R: ResponseChannel<M>>(self, _: &mut A::Context, tx: Option<R>) {
-        if let Some(tx) = tx {
-            tx.send(self);
-        }
+#[derive(Message)]
+#[rtype(result = "Added")]
+struct Sum(usize, usize);
+
+#[derive(Default)]
+struct Adder;
+
+impl Actor for Adder {
+    type Context = Context<Self>;
+}
+
+impl Handler<Sum> for Adder {
+    type Result = <Sum as actix::Message>::Result;
+    fn handle(&mut self, msg: Sum, _: &mut Self::Context) -> Added {
+        Added(msg.0 + msg.1)
     }
 }
 
@@ -67,9 +61,9 @@ fn main() {}
 
 This project is licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   http://opensource.org/licenses/MIT)
+  * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+    https://www.apache.org/licenses/LICENSE-2.0)
+  * MIT license ([LICENSE-MIT](LICENSE-MIT) or
+    https://opensource.org/licenses/MIT)
 
 at your option.
